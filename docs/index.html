@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Football Tracking — FC Barcelona vs Celta Vigo</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --barca:   #A50044;
+    --celta:   #75AADB;
+    --bg:      #0d1117;
+    --surface: #161b22;
+    --border:  #30363d;
+    --text:    #e6edf3;
+    --muted:   #8b949e;
+    --accent:  #58a6ff;
+    --green:   #3fb950;
+    --yellow:  #d29922;
+    --red:     #f85149;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ── Header ──────────────────────────────────────────────────── */
+  header {
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a0a1a 50%, #0a0a1a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 28px 32px 20px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .badge {
+    background: linear-gradient(135deg, var(--barca), #004D98);
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .match-title h1 { font-size: 22px; font-weight: 700; }
+  .match-title .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .score-badge {
+    margin-left: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 20px;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    white-space: nowrap;
+  }
+
+  /* ── Nav ─────────────────────────────────────────────────────── */
+  nav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    display: flex;
+    gap: 0;
+    flex-wrap: wrap;
+  }
+  nav button {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 14px 20px;
+    transition: all .2s;
+  }
+  nav button:hover { color: var(--text); }
+  nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── Sections ────────────────────────────────────────────────── */
+  .section { display: none; padding: 28px 32px; }
+  .section.active { display: block; }
+
+  /* ── Pitch layout ────────────────────────────────────────────── */
+  .pc-layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .pc-layout { grid-template-columns: 1fr; }
+  }
+  .canvas-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    position: relative;
+  }
+  #pitchCanvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    cursor: crosshair;
+  }
+  .frame-info {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+    text-align: center;
+  }
+
+  /* ── Controls panel ──────────────────────────────────────────── */
+  .pc-controls {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .pc-controls h3 {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+  .ctrl-section {
+    border-top: 1px solid var(--border);
+    margin-top: 14px;
+    padding-top: 12px;
+  }
+  .ctrl-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .ctrl-row { margin-bottom: 12px; }
+  .ctrl-row label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .ctrl-row input[type=range] {
+    width: 100%;
+    accent-color: var(--accent);
+  }
+  .ctrl-row .val {
+    float: right;
+    font-size: 12px;
+    color: var(--text);
+    font-weight: 700;
+  }
+  .playback-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 6px;
+    color: #000;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 7px 14px;
+    transition: opacity .15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn.secondary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  /* ── Toggle checkboxes ───────────────────────────────────────── */
+  .toggle-group { display: flex; flex-direction: column; gap: 7px; }
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .toggle-row input[type=checkbox] {
+    accent-color: var(--accent);
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+  }
+
+  /* ── Tags radio group ────────────────────────────────────────── */
+  .radio-group {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .radio-group label {
+    flex: 1;
+    text-align: center;
+    padding: 7px 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--muted);
+    background: var(--surface);
+    transition: all .15s;
+    user-select: none;
+  }
+  .radio-group input[type=radio] { display: none; }
+  .radio-group input[type=radio]:checked + label {
+    background: var(--accent);
+    color: #000;
+  }
+
+  /* ── Speed display mode ──────────────────────────────────────── */
+  .speed-mode-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .speed-mode-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .speed-mode-group input[type=radio] { accent-color: var(--accent); }
+
+  /* ── Legend ──────────────────────────────────────────────────── */
+  .legend-box { margin-top: 14px; }
+  .legend-box h4 { font-size: 11px; color: var(--muted); margin-bottom: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+    font-size: 12px;
+  }
+  .leg-swatch { width: 24px; height: 13px; border-radius: 3px; flex-shrink: 0; }
+
+  /* ── Speed table ──────────────────────────────────────────────── */
+  .table-toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .search-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    padding: 8px 14px;
+    width: 240px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .search-box:focus { border-color: var(--accent); }
+  .filter-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 14px;
+    transition: all .15s;
+  }
+  .filter-btn:hover, .filter-btn.active {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+  }
+  .tbl-wrap {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    overflow-x: auto;
+  }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  thead tr { background: #1c2130; }
+  thead th {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    padding: 12px 14px;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition: color .15s;
+  }
+  thead th:hover { color: var(--text); }
+  thead th.sort-asc::after  { content: ' ▲'; font-size: 9px; }
+  thead th.sort-desc::after { content: ' ▼'; font-size: 9px; }
+  tbody tr { border-top: 1px solid var(--border); transition: background .1s; }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  td { padding: 10px 14px; white-space: nowrap; }
+  .team-pill { border-radius: 4px; font-size: 11px; font-weight: 700; padding: 2px 8px; }
+  .pill-home { background: rgba(165,0,68,.25); color: #ff6b9d; }
+  .pill-away { background: rgba(117,170,219,.25); color: var(--celta); }
+  .speed-bar-wrap {
+    background: var(--border);
+    border-radius: 999px;
+    height: 6px;
+    width: 80px;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  .speed-bar { height: 100%; border-radius: 999px; }
+  .zone-dots { display: flex; gap: 3px; }
+  .zone-dot { border-radius: 3px; font-size: 10px; font-weight: 700; padding: 1px 5px; }
+  .z-walk   { background: rgba(100,200,100,.15); color: #64c864; }
+  .z-jog    { background: rgba(200,200,0,.15);   color: #c8c800; }
+  .z-run    { background: rgba(255,165,0,.15);   color: #ffa500; }
+  .z-hsr    { background: rgba(255,80,0,.15);    color: #ff5000; }
+  .z-sprint { background: rgba(255,0,0,.2);      color: #ff3333; }
+  .rank-badge { background: var(--border); border-radius: 4px; color: var(--muted); font-size: 11px; font-weight: 700; min-width: 22px; padding: 2px 5px; text-align: center; }
+  .rank-1 { background: #FFD700; color: #000; }
+  .rank-2 { background: #C0C0C0; color: #000; }
+  .rank-3 { background: #CD7F32; color: #000; }
+
+  /* ── Loading overlay ──────────────────────────────────────────── */
+  #loading {
+    align-items: center;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    inset: 0;
+    justify-content: center;
+    position: fixed;
+    z-index: 999;
+  }
+  .spinner {
+    width: 44px; height: 44px;
+    border: 4px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading p { color: var(--muted); font-size: 14px; }
+
+  footer {
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 40px;
+    padding: 20px 32px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="loading">
+  <div class="spinner"></div>
+  <p>Loading tracking data…</p>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="badge">LaLiga 2025/26</div>
+  <div class="match-title">
+    <h1 id="matchTitle">FC Barcelona vs RC Celta de Vigo</h1>
+    <div class="sub" id="matchSub">Camp Nou · Loading…</div>
+  </div>
+  <div class="score-badge" id="scoreBadge">–</div>
+</header>
+
+<!-- Navigation -->
+<nav>
+  <button class="active" onclick="showTab('pitch-control', this)">⬡ Pitch Control</button>
+  <button onclick="showTab('speed-table', this)">⚡ Player Speeds</button>
+</nav>
+
+<!-- ─────────────────────────────────────────────────────────────────────
+     PITCH CONTROL TAB
+     ───────────────────────────────────────────────────────────────────── -->
+<section class="section active" id="pitch-control">
+  <div class="pc-layout">
+
+    <!-- Canvas -->
+    <div>
+      <div class="canvas-wrap">
+        <canvas id="pitchCanvas" width="1050" height="680"></canvas>
+        <div class="frame-info" id="frameInfo">Use the slider to navigate frames</div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="pc-controls">
+      <h3>Playback</h3>
+
+      <div class="ctrl-row">
+        <label>Frame <span class="val" id="frameVal">0 / 0</span></label>
+        <input type="range" id="frameSlider" min="0" max="0" value="0"
+               oninput="onFrameSlider(this.value)">
+      </div>
+
+      <div class="playback-row">
+        <button class="btn" id="playBtn" onclick="togglePlay()">▶ Play</button>
+        <button class="btn secondary" onclick="stepFrame(-1)">◀</button>
+        <button class="btn secondary" onclick="stepFrame(1)">▶</button>
+      </div>
+
+      <!-- ── Pitch Control Model params ── -->
+      <div class="ctrl-section">
+        <div class="ctrl-section-title">Pitch Control Model</div>
+
+        <div class="ctrl-row">
+          <label>Influence radius (m) <span class="val" id="radVal">10</span></label>
+          <input type="range" id="radSlider" min="3" max="25" value="10" step="1"
+                 oninput="document.getElementById('radVal').textContent=this.value; renderFrame()">
+        </div>
+
+        <div class="ctrl-row">
+          <label>Speed weight <span class="val" id="swVal">1.0</span></label>
+          <input type="range" id="swSlider" min="0" max="2" value="1" step="0.1"
+                 oninput="document.getElementById('swVal').textContent=parseFloat(this.value).toFixed(1); renderFrame()">
+        </div>
+
+        <div class="ctrl-row">
+          <label>Heatmap opacity <span class="val" id="opVal">0.60</span></label>
+          <input type="range" id="opSlider" min="0.2" max="1" value="0.6" step="0.05"
+                 oninput="document.getElementById('opVal').textContent=parseFloat(this.value).toFixed(2); renderFrame()">
+        </div>
+      </div>
+
+      <!-- ── Player visualisation ── -->
+      <div class="ctrl-section">
+        <div class="ctrl-section-title">Player Visualisation</div>
+
+        <div class="toggle-group">
+          <label class="toggle-row">
+            <input type="checkbox" id="showPlayers" checked onchange="renderFrame()">
+            Show player dots
+          </label>
+          <label class="toggle-row">
+            <input type="checkbox" id="showBall" checked onchange="renderFrame()">
+            Show ball
+          </label>
+        </div>
+
+        <!-- Player Tags toggle (radio) -->
+        <div class="ctrl-row" style="margin-top:12px">
+          <div class="ctrl-section-title" style="margin-bottom:6px">Player Tags</div>
+          <div class="radio-group">
+            <input type="radio" name="tagsMode" id="tagsOn"  value="on"  checked onchange="renderFrame()">
+            <label for="tagsOn">With Tags</label>
+            <input type="radio" name="tagsMode" id="tagsOff" value="off"        onchange="renderFrame()">
+            <label for="tagsOff">Without Tags</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Speed & Direction ── -->
+      <div class="ctrl-section">
+        <div class="ctrl-section-title">Speed &amp; Direction</div>
+
+        <div class="toggle-group">
+          <label class="toggle-row">
+            <input type="checkbox" id="showDirection" checked onchange="renderFrame()">
+            Show direction arrows
+          </label>
+          <label class="toggle-row">
+            <input type="checkbox" id="showSpeedLabel" onchange="renderFrame()">
+            Show speed values (km/h)
+          </label>
+        </div>
+
+        <!-- Arrow scale -->
+        <div class="ctrl-row" style="margin-top:10px">
+          <label>Arrow length scale <span class="val" id="arrowScaleVal">3.5</span></label>
+          <input type="range" id="arrowScaleSlider" min="1" max="8" value="3.5" step="0.5"
+                 oninput="document.getElementById('arrowScaleVal').textContent=parseFloat(this.value).toFixed(1); renderFrame()">
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="legend-box">
+        <h4>Legend</h4>
+        <div class="legend-row"><div class="leg-swatch" style="background:#A50044"></div> FC Barcelona (home)</div>
+        <div class="legend-row"><div class="leg-swatch" style="background:#75AADB"></div> RC Celta de Vigo (away)</div>
+        <div class="legend-row"><div class="leg-swatch" style="background:rgba(165,0,68,0.45)"></div> Barcelona control zone</div>
+        <div class="legend-row"><div class="leg-swatch" style="background:rgba(117,170,219,0.45)"></div> Celta control zone</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────────────────────────────
+     SPEED TABLE TAB
+     ───────────────────────────────────────────────────────────────────── -->
+<section class="section" id="speed-table">
+  <div class="table-toolbar">
+    <input class="search-box" id="searchBox" placeholder="🔍  Search player…"
+           oninput="filterTable()">
+    <button class="filter-btn active" onclick="setTeamFilter('all', this)">All</button>
+    <button class="filter-btn" id="homeBtn" onclick="setTeamFilter('home', this)">Barcelona</button>
+    <button class="filter-btn" id="awayBtn" onclick="setTeamFilter('away', this)">Celta Vigo</button>
+    <span style="margin-left:auto;color:var(--muted);font-size:12px" id="tableCount"></span>
+  </div>
+
+  <div class="tbl-wrap">
+    <table id="speedTable">
+      <thead>
+        <tr>
+          <th onclick="sortTable('rank')">#</th>
+          <th onclick="sortTable('name')">Player</th>
+          <th onclick="sortTable('team')">Team</th>
+          <th onclick="sortTable('position')">Position</th>
+          <th onclick="sortTable('avg_speed_kmh')">Avg Speed ↓</th>
+          <th onclick="sortTable('sprint_pct')">Sprint %</th>
+          <th>Speed Zones</th>
+          <th onclick="sortTable('walk_pct')">Walk %</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  Data: SkillCorner Tracking · LaLiga 2025/2026 · FC Barcelona 1–0 RC Celta de Vigo
+</footer>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════════════════════
+let framesData = null;
+let speedsData = null;
+let currentFrame = 0;
+let playing = false;
+let playInterval = null;
+let teamFilter = 'all';
+let sortKey = 'avg_speed_kmh';
+let sortDir = -1;
+
+const PITCH_W = 105, PITCH_H = 68;
+const GRID_COLS = 105, GRID_ROWS = 68;
+const FPS = 25;
+
+// ════════════════════════════════════════════════════════════════
+//  DATA LOADING
+// ════════════════════════════════════════════════════════════════
+Promise.all([
+  fetch('pitch_frames.json').then(r => r.json()),
+  fetch('player_speeds.json').then(r => r.json()),
+]).then(([frames, speeds]) => {
+  framesData = frames;
+  speedsData = speeds;
+
+  const m = speeds.match;
+  document.getElementById('matchTitle').textContent = `${m.home_team} vs ${m.away_team}`;
+  document.getElementById('matchSub').textContent   = `${m.venue} · ${m.date}`;
+  document.getElementById('scoreBadge').textContent = `${m.home_score}–${m.away_score}`;
+  document.getElementById('homeBtn').textContent    = m.home_team;
+  document.getElementById('awayBtn').textContent    = m.away_team;
+
+  const slider = document.getElementById('frameSlider');
+  slider.max = framesData.frames.length - 1;
+  document.getElementById('frameVal').textContent = `0 / ${framesData.frames.length - 1}`;
+
+  buildTable(speeds.players);
+  document.getElementById('loading').style.display = 'none';
+  renderFrame();
+}).catch(err => {
+  document.getElementById('loading').innerHTML =
+    `<div style="color:#f85149;text-align:center;padding:40px">
+      <h2>⚠ Data files not found</h2>
+      <p style="margin-top:12px;color:#8b949e">
+        Run <code>python3 process_data.py</code> first to generate<br>
+        <code>pitch_frames.json</code> and <code>player_speeds.json</code>.
+      </p>
+    </div>`;
+  console.error(err);
+});
+
+// ════════════════════════════════════════════════════════════════
+//  PITCH CONTROL MODEL  (Fernández–Born simplified)
+// ════════════════════════════════════════════════════════════════
+function computePitchControl(frame, speedWeight, radius) {
+  const meta = framesData.meta;
+  const v0 = 1.5;
+  const T_ref = radius / (v0 * 1.5);
+  const sigma_T = 0.45;
+  const grid = new Float32Array(GRID_COLS * GRID_ROWS);
+  if (!frame || !frame.players || frame.players.length === 0) return grid;
+
+  const home = [], away = [];
+  for (const p of frame.players) {
+    const pm = meta.player_meta[p.id];
+    if (!pm) continue;
+    const e = { x: p.x, y: p.y, vx: p.vx, vy: p.vy, speed: p.speed };
+    if (pm.team_id === meta.home_team_id) home.push(e);
+    else away.push(e);
+  }
+
+  function influence(player, cx, cy) {
+    const dx = cx - player.x, dy = cy - player.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < 0.01) return 1.0;
+    let dir = 0;
+    if (player.speed > 0.1) {
+      const dot = (player.vx * dx + player.vy * dy) / (player.speed * dist);
+      dir = (dot + 1) * 0.5;
+    }
+    const eff = player.speed * speedWeight * dir * 0.7 + v0;
+    const T = dist / eff;
+    return 1 / (1 + Math.exp((T - T_ref) / sigma_T));
+  }
+
+  for (let row = 0; row < GRID_ROWS; row++) {
+    for (let col = 0; col < GRID_COLS; col++) {
+      const cx = -PITCH_W/2 + col + 0.5;
+      const cy = -PITCH_H/2 + row + 0.5;
+      let hc = 0, ac = 0;
+      for (const p of home) hc += influence(p, cx, cy);
+      for (const p of away) ac += influence(p, cx, cy);
+      const total = hc + ac;
+      grid[row * GRID_COLS + col] = total > 0 ? (hc - ac) / total : 0;
+    }
+  }
+  return grid;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  CANVAS / RENDERING
+// ════════════════════════════════════════════════════════════════
+const canvas = document.getElementById('pitchCanvas');
+const ctx    = canvas.getContext('2d');
+
+const offCanvas = document.createElement('canvas');
+offCanvas.width  = GRID_COLS;
+offCanvas.height = GRID_ROWS;
+const offCtx   = offCanvas.getContext('2d');
+const imageData = offCtx.createImageData(GRID_COLS, GRID_ROWS);
+
+function renderFrame() {
+  if (!framesData) return;
+  const frame = framesData.frames[currentFrame];
+
+  // Read controls
+  const speedWeight  = parseFloat(document.getElementById('swSlider').value);
+  const radius       = parseFloat(document.getElementById('radSlider').value);
+  const opacity      = parseFloat(document.getElementById('opSlider').value);
+  const showPlayers  = document.getElementById('showPlayers').checked;
+  const showBall     = document.getElementById('showBall').checked;
+  const showDir      = document.getElementById('showDirection').checked;
+  const showSpeedLbl = document.getElementById('showSpeedLabel').checked;
+  const arrowScale   = parseFloat(document.getElementById('arrowScaleSlider').value);
+  const tagsOn       = document.getElementById('tagsOn').checked;   // tags radio
+
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // ── Grass ────────────────────────────────────────────────────
+  drawPitch(ctx, W, H);
+
+  // ── Heatmap ──────────────────────────────────────────────────
+  const grid = computePitchControl(frame, speedWeight, radius);
+  const d = imageData.data;
+  for (let i = 0; i < GRID_COLS * GRID_ROWS; i++) {
+    const v = grid[i];
+    const idx = i * 4;
+    if (v > 0) {
+      d[idx]=165; d[idx+1]=0; d[idx+2]=68;
+      d[idx+3] = Math.round(v * 200);
+    } else if (v < 0) {
+      d[idx]=117; d[idx+1]=170; d[idx+2]=219;
+      d[idx+3] = Math.round(-v * 200);
+    } else {
+      d[idx+3] = 0;
+    }
+  }
+  offCtx.putImageData(imageData, 0, 0);
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  ctx.drawImage(offCanvas, 0, 0, W, H);
+  ctx.restore();
+
+  if (!frame) return;
+
+  // ── Players ──────────────────────────────────────────────────
+  if (showPlayers && frame.players) {
+    const meta = framesData.meta;
+    for (const p of frame.players) {
+      const pm     = meta.player_meta[p.id];
+      const isHome = pm && pm.team_id === meta.home_team_id;
+      const color  = isHome ? '#A50044' : '#75AADB';
+      const px     = pitchToCanvasX(p.x, W);
+      const py     = pitchToCanvasY(p.y, H);
+
+      // ── Direction arrow ────────────────────────────────────
+      if (showDir && p.speed > 0.3) {
+        const scale = arrowScale;
+        const ex = pitchToCanvasX(p.x + p.vx / FPS * scale * FPS, W);
+        const ey = pitchToCanvasY(p.y + p.vy / FPS * scale * FPS, H);
+        const ang = Math.atan2(ey - py, ex - px);
+        const headLen = 7;
+
+        ctx.save();
+        ctx.globalAlpha = 0.85;
+        ctx.strokeStyle = color;
+        ctx.lineWidth   = 2;
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+        // Arrowhead
+        ctx.beginPath();
+        ctx.moveTo(ex, ey);
+        ctx.lineTo(ex - headLen * Math.cos(ang - Math.PI/6),
+                   ey - headLen * Math.sin(ang - Math.PI/6));
+        ctx.lineTo(ex - headLen * Math.cos(ang + Math.PI/6),
+                   ey - headLen * Math.sin(ang + Math.PI/6));
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // ── Player dot ─────────────────────────────────────────
+      ctx.beginPath();
+      ctx.arc(px, py, 8, 0, Math.PI*2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth   = 1.5;
+      ctx.stroke();
+
+      // ── Jersey number tag ──────────────────────────────────
+      if (tagsOn && pm) {
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 7px sans-serif';
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(pm.number || '', px, py);
+      }
+
+      // ── Speed label (km/h) ─────────────────────────────────
+      if (showSpeedLbl && p.speed !== undefined) {
+        const kmh = (p.speed * 3.6).toFixed(1);
+        // Background pill
+        ctx.save();
+        ctx.font = 'bold 9px sans-serif';
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'top';
+        const labelY = py + 11;
+        const tw = ctx.measureText(kmh + ' km/h').width + 4;
+        ctx.fillStyle = 'rgba(0,0,0,0.65)';
+        roundRect(ctx, px - tw/2, labelY - 1, tw, 12, 3);
+        ctx.fill();
+        ctx.fillStyle = '#f0f0f0';
+        ctx.fillText(kmh + ' km/h', px, labelY);
+        ctx.restore();
+      }
+    }
+  }
+
+  // ── Ball ─────────────────────────────────────────────────────
+  if (showBall && frame.ball && frame.ball.x !== null) {
+    const bx = pitchToCanvasX(frame.ball.x, W);
+    const by = pitchToCanvasY(frame.ball.y, H);
+    ctx.beginPath();
+    ctx.arc(bx, by, 6, 0, Math.PI*2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // ── Frame info ────────────────────────────────────────────────
+  const poss = frame.possession;
+  let possText = poss && poss.group ? ` · Possession: ${poss.group}` : '';
+  document.getElementById('frameInfo').textContent =
+    `Frame ${frame.frame} · Period ${frame.period} · ${frame.timestamp || ''}${possText}`;
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawPitch(ctx, W, H) {
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0,   '#1a4a1a');
+  grad.addColorStop(0.5, '#1f541f');
+  grad.addColorStop(1,   '#1a4a1a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  for (let i = 0; i < 10; i++) {
+    if (i % 2 === 0) {
+      ctx.fillStyle = 'rgba(0,0,0,0.06)';
+      ctx.fillRect(i * W/10, 0, W/10, H);
+    }
+  }
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+  ctx.lineWidth = 1.5;
+
+  const m  = { x: W * 0.05, y: H * 0.05 };
+  const pw = W * 0.9, ph = H * 0.9;
+
+  ctx.strokeRect(m.x, m.y, pw, ph);
+
+  ctx.beginPath();
+  ctx.moveTo(m.x + pw/2, m.y);
+  ctx.lineTo(m.x + pw/2, m.y + ph);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(m.x + pw/2, m.y + ph/2, ph * 0.14, 0, Math.PI*2);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(m.x + pw/2, m.y + ph/2, 3, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fill();
+
+  const paW = pw * 0.16, paH = ph * 0.57;
+  ctx.strokeRect(m.x, m.y + (ph - paH)/2, paW, paH);
+  ctx.strokeRect(m.x + pw - paW, m.y + (ph - paH)/2, paW, paH);
+
+  const sbW = pw * 0.057, sbH = ph * 0.27;
+  ctx.strokeRect(m.x, m.y + (ph - sbH)/2, sbW, sbH);
+  ctx.strokeRect(m.x + pw - sbW, m.y + (ph - sbH)/2, sbW, sbH);
+
+  const gW = pw * 0.013, gH = ph * 0.11;
+  ctx.strokeRect(m.x - gW, m.y + (ph - gH)/2, gW, gH);
+  ctx.strokeRect(m.x + pw, m.y + (ph - gH)/2, gW, gH);
+
+  [m.x + pw * 0.115, m.x + pw * 0.885].forEach(sx => {
+    ctx.beginPath();
+    ctx.arc(sx, m.y + ph/2, 2.5, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fill();
+  });
+}
+
+function pitchToCanvasX(x, W) {
+  return (x / PITCH_W + 0.5) * W * 0.9 + W * 0.05;
+}
+function pitchToCanvasY(y, H) {
+  return (y / PITCH_H + 0.5) * H * 0.9 + H * 0.05;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  PLAYBACK
+// ════════════════════════════════════════════════════════════════
+function onFrameSlider(val) {
+  currentFrame = parseInt(val);
+  document.getElementById('frameVal').textContent =
+    `${currentFrame} / ${framesData.frames.length - 1}`;
+  renderFrame();
+}
+
+function stepFrame(delta) {
+  if (!framesData) return;
+  currentFrame = Math.max(0,
+    Math.min(framesData.frames.length - 1, currentFrame + delta));
+  document.getElementById('frameSlider').value = currentFrame;
+  onFrameSlider(currentFrame);
+}
+
+function togglePlay() {
+  playing = !playing;
+  const btn = document.getElementById('playBtn');
+  if (playing) {
+    btn.textContent = '⏸ Pause';
+    playInterval = setInterval(() => {
+      stepFrame(1);
+      if (currentFrame >= framesData.frames.length - 1) togglePlay();
+    }, 80);
+  } else {
+    btn.textContent = '▶ Play';
+    clearInterval(playInterval);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  SPEED TABLE
+// ════════════════════════════════════════════════════════════════
+let allPlayers = [];
+
+function buildTable(players) {
+  allPlayers = players;
+  renderTable();
+}
+
+function renderTable() {
+  const query = (document.getElementById('searchBox')?.value || '').toLowerCase();
+  let rows = allPlayers.filter(p => {
+    const teamOk   = teamFilter === 'all' || p.team_side === teamFilter;
+    const searchOk = !query ||
+                     p.name.toLowerCase().includes(query) ||
+                     p.position.toLowerCase().includes(query);
+    return teamOk && searchOk;
+  });
+
+  rows.sort((a, b) => {
+    let av = a[sortKey] ?? 0, bv = b[sortKey] ?? 0;
+    if (typeof av === 'string') return sortDir * av.localeCompare(bv);
+    return sortDir * (bv - av);
+  });
+
+  document.getElementById('tableCount').textContent = `${rows.length} players`;
+
+  const maxSpd = Math.max(...rows.map(r => r.avg_speed_kmh), 1);
+  const tbody  = document.getElementById('tableBody');
+  tbody.innerHTML = rows.map((p, i) => {
+    const rank = i + 1;
+    const rc = rank <= 3 ? `rank-${rank}` : '';
+    const barPct = (p.avg_speed_kmh / maxSpd * 100).toFixed(1);
+    const barColor = p.avg_speed_kmh > 20 ? '#f85149' :
+                     p.avg_speed_kmh > 16 ? '#d29922' : '#3fb950';
+    return `
+    <tr>
+      <td><span class="rank-badge ${rc}">${rank}</span></td>
+      <td><strong>${p.name}</strong></td>
+      <td><span class="team-pill pill-${p.team_side}">${p.team}</span></td>
+      <td style="color:var(--muted)">${p.position}</td>
+      <td>
+        <span class="speed-bar-wrap">
+          <span class="speed-bar" style="width:${barPct}%;background:${barColor}"></span>
+        </span>
+        <strong>${p.avg_speed_kmh}</strong> km/h
+      </td>
+      <td>${p.sprint_pct}%</td>
+      <td>
+        <div class="zone-dots">
+          <span class="zone-dot z-walk"   title="Walking (0–7 km/h)">${p.walk_pct}%</span>
+          <span class="zone-dot z-jog"    title="Jogging (7–14 km/h)">${p.jog_pct}%</span>
+          <span class="zone-dot z-run"    title="Running (14–20 km/h)">${p.run_pct}%</span>
+          <span class="zone-dot z-hsr"    title="High Speed (20–25 km/h)">${p.hsr_pct}%</span>
+          <span class="zone-dot z-sprint" title="Sprint (>25 km/h)">${p.sprint_pct}%</span>
+        </div>
+      </td>
+      <td>${p.walk_pct}%</td>
+    </tr>`;
+  }).join('');
+
+  document.querySelectorAll('thead th').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (th.getAttribute('onclick')?.includes(sortKey)) {
+      th.classList.add(sortDir === -1 ? 'sort-desc' : 'sort-asc');
+    }
+  });
+}
+
+function filterTable() { renderTable(); }
+
+function setTeamFilter(filter, btn) {
+  teamFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+}
+
+function sortTable(key) {
+  if (sortKey === key) sortDir *= -1;
+  else { sortKey = key; sortDir = -1; }
+  renderTable();
+}
+
+// ════════════════════════════════════════════════════════════════
+//  TAB NAVIGATION
+// ════════════════════════════════════════════════════════════════
+function showTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'pitch-control') renderFrame();
+}
+</script>
+</body>
+</html>

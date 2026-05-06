@@ -1,0 +1,5 @@
+# Ignore raw tracking data (too large) and office files
+2064380_tracking_extrapolated.jsonl
+*.docx
+*.webm
+*.png
